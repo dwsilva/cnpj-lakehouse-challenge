@@ -1,4 +1,4 @@
-# FinOps e Otimização — CNPJ Lakehouse no Google BigQuery
+# FinOps e Otimização - CNPJ Lakehouse no Google BigQuery
 
 Proposta de implantação do pipeline CNPJ (dbt + Prefect, hoje em DuckDB local) em **Google BigQuery**, com foco em custo, performance e onboarding de novos colaboradores.
 
@@ -76,7 +76,7 @@ Staging e intermediate como view: o custo está na query das marts, onde pruning
 
 ---
 
-## 4. Partitioning — decisões e impacto em slots/custo
+## 4. Partitioning - decisões e impacto em slots/custo
 
 ### 4.1 Fato `fct_empresas_ativas`
 
@@ -88,30 +88,33 @@ CLUSTER BY uf, cnae_fiscal_principal, situacao_cadastral
 OPTIONS (require_partition_filter = TRUE, partition_expiration_days = 730)
 ```
 
-`data_referencia` é a data da execução (snapshot do universo de ativas). Queries do tipo “ativas em SP neste mês” leem ~30 partições, não o histórico inteiro.
+**Grain (importante):** a fato é **estado corrente** - `unique_key = cnpj`, incremental `merge`. Uma linha por empresa ativa, não um histórico diário. `data_referencia` é a data em que aquela linha foi (re)processada. O merge **não** regrava quem não mudou; um `WHERE data_referencia` nos últimos 30 dias **não** significa “todas as ativas do mês”.
 
-| Histórico | Scan típico (filtro 30 dias) | Redução vs full scan |
+No BigQuery isso muda o que a partição compra:
+
+- **Como está o modelo:** o ganho principal no BI (“ativas em SP, CNAE 62”) é o **clustering**. A partição + `require_partition_filter` continuam úteis como teto contra `SELECT *` e para jobs que filtram a data da carga.
+- **Se o produto precisar de série temporal:** passar a append diário (todas as ativas, `data_referencia = current_date`, sem merge por `cnpj`). Aí a tabela abaixo vale - 30 partições de 365, não o estado corrente.
+
+| Histórico (opção série diária) | Scan típico (filtro 30 dias) | Redução vs full scan |
 |-----------|------------------------------|----------------------|
 | 1 ano (365 partições) | 30/365 ≈ 8% | ~92% dos bytes |
 | 2 anos | 30/730 ≈ 4% | ~96% |
 
-**Slots:** menos bytes → menos slot-ms no on-demand e menos slot-seconds no Editions. `require_partition_filter` impede o `SELECT *` acidental que varre 2 anos.
+**Slots:** menos bytes → menos slot-ms no on-demand e menos slot-seconds no Editions. `require_partition_filter` impede o `SELECT *` acidental.
 
-Query que o BI deve emitir (pruning acontece):
+Query típica no grain **corrente** (cluster faz o trabalho pesado; o filtro de partição é o da última carga completa, se houver):
 
 ```sql
 SELECT uf, COUNT(*) AS ativas
 FROM `projeto.cnpj_marts.fct_empresas_ativas`
-WHERE data_referencia BETWEEN '2026-07-01' AND '2026-07-31'
+WHERE data_referencia = CURRENT_DATE()   -- ou a data do último full refresh
   AND uf = 'SP'
 GROUP BY 1;
 ```
 
-Sem o `WHERE` em `data_referencia` o BQ recusa a query (`require_partition_filter`) em vez de faturar o scan inteiro — isso é o guardrail de onboarding mais barato que existe.
-
 ### 4.2 Snapshot de capital social
 
-`PARTITION BY DATE(dbt_valid_from)` — auditoria (“capital vigente em 2025-Q3”) não lê SCD2 desde o início da série.
+Proposta de go-live (não está no snapshot DuckDB): `PARTITION BY DATE(dbt_valid_from)` - auditoria (“capital vigente em 2025-Q3”) não lê SCD2 desde o início da série.
 
 ### 4.3 Raw
 
@@ -119,7 +122,7 @@ Sem o `WHERE` em `data_referencia` o BQ recusa a query (`require_partition_filte
 
 ---
 
-## 5. Clustering — decisões e impacto
+## 5. Clustering - decisões e impacto
 
 Clustering ordena blocos **dentro** da partição já filtrada. Ordem das colunas = seletividade das queries reais.
 
@@ -138,11 +141,11 @@ Cenário ilustrativo (partição mensal ~5 GB sem cluster):
 | Ativas SP, último mês | ~400 MB | ~40 MB |
 | Ativas SP + CNAE 62*, mês | ~400 MB | ~15 MB |
 
-On-demand ($6,25 / TiB scanned, ordem de grandeza pública do BQ): cair de 5 GB para 40 MB é ~125× menos bytes — a query sai da casa dos centavos para fração de centavo.
+On-demand ($6,25 / TiB scanned, ordem de grandeza pública do BQ): cair de 5 GB para 40 MB é ~125× menos bytes - a query sai da casa dos centavos para fração de centavo.
 
 ### Dimensão empresa
 
-`CLUSTER BY cnpj_basico, porte_empresa` — acelera o join fato↔dim e filtros ME/EPP. Tabela pequena frente à fato; cluster é barato e previsível.
+`CLUSTER BY cnpj_basico, porte_empresa` - acelera o join fato↔dim e filtros ME/EPP. Tabela pequena frente à fato; cluster é barato e previsível.
 
 `dim_cnae` (~1,3k linhas): full refresh, sem partition.
 
@@ -159,7 +162,7 @@ On-demand ($6,25 / TiB scanned, ordem de grandeza pública do BQ): cair de 5 GB 
 
 **Capital social** muda em aumento/redução de capital e reorganizações. SCD2 gera `dbt_valid_from` / `dbt_valid_to`. Custo de storage: append das mudanças (~2% das empresas/mês é uma ordem de grandeza razoável), não um dump mensal completo.
 
-Ingestão mensal da RF (dia 5, 06:00 BRT, já no Prefect): Load Job com schema explícito, encoding latin-1, `;`, sem header — igual ao `rf_ingest.py`. Depois da primeira carga, converter landing para **Parquet** no GCS reduz storage ~60% e acelera reprocessamento.
+Ingestão mensal da RF (dia 5, 06:00 BRT, já no Prefect): Load Job com schema explícito, encoding latin-1, `;`, sem header - igual ao `rf_ingest.py`. Depois da primeira carga, converter landing para **Parquet** no GCS reduz storage ~60% e acelera reprocessamento.
 
 Lifecycle: GCS > 180 dias; partições raw BQ com expiration 90 dias.
 
@@ -196,7 +199,7 @@ Guardrails práticos:
 - `maximum_bytes_billed` nas contas de BI
 - Budget alert no billing account
 - Labels dbt já no `dbt_project.yml` (`cost_center: cnpj-analytics`) para chargeback
-- Policy tags PII: `infra/policy_tags.tf` (CNPJ, nome, endereço) — Fine-Grained Access no BQ
+- Policy tags PII: `infra/policy_tags.tf` (CNPJ, nome, endereço) - Fine-Grained Access no BQ
 
 ---
 
@@ -212,6 +215,8 @@ Retries já existem nas tasks de download/ingest (`cnpj_tasks.py`). ZIP corrompi
 
 ## 9. Onboarding de novos colaboradores
 
+**Local (primeiro dia, sem GCP):**
+
 ```bash
 git clone https://github.com/dwsilva/cnpj-lakehouse-challenge.git
 cd cnpj-lakehouse-challenge
@@ -219,20 +224,28 @@ docker compose build
 docker compose run --rm pipeline
 ```
 
-Não é necessário GCP, `.env` nem Python no host. Depois do run: `duckdb/cnpj.duckdb` e 39 testes verdes.
+Não precisa de `.env` nem Python no host. Esperado: `duckdb/cnpj.duckdb` e 39 testes verdes.
+
+**BigQuery (quando for promover o mesmo dbt):**
+
+1. Projeto GCP + datasets na mesma location: `cnpj_raw`, `cnpj_staging`, `cnpj_intermediate`, `cnpj_marts`, `cnpj_snapshots`.
+2. Service account do dbt: `roles/bigquery.jobUser` no projeto e `roles/bigquery.dataEditor` nesses datasets. Analistas: `roles/bigquery.dataViewer` **só** em `cnpj_marts`.
+3. Copiar `dbt/profiles.yml` para um output `prod` (`type: bigquery`, `dataset`, `keyfile` ou ADC). As vars `policy_tag_*` vêm do `terraform apply` em `infra/`.
+4. Primeiro run: `dbt deps && dbt run --target prod && dbt snapshot --target prod && dbt test --target prod`. Conferir no console se a fato tem partition `data_referencia` e cluster `uf, cnae_fiscal_principal, situacao_cadastral`.
+5. Label `cost_center: cnpj-analytics` (já no `dbt_project.yml`) + budget alert no billing. Dúvida de grain da fato: §4.1 deste doc.
 
 | Quer entender… | Abra |
 |----------------|------|
 | Modelagem | `dbt/models/` (staging → int → marts) |
 | SCD2 | `dbt/snapshots/snap_empresas_capital_social.sql` |
 | Orquestração | `orchestration/flows/` |
-| Partition/cluster (este doc + código) | `fct_empresas_ativas.sql` (`partition_by` / `cluster_by`) |
+| Partition/cluster (código) | `fct_empresas_ativas.sql` (`partition_by` / `cluster_by`) |
 | Lineage | `docker compose --profile docs up dbt-docs` → :8080 |
 | UI Prefect | `docker compose --profile prefect up prefect-server prefect-worker -d` → :4200 |
 
-CI: `.github/workflows/dbt-test.yml` carrega fixtures em `data/ci/` e roda `dbt test` — sem download da RF.
+CI: `.github/workflows/dbt-test.yml` carrega fixtures em `data/ci/` e roda `dbt test` - sem download da RF.
 
-Fora do MVP local (e deste documento): Terraform completo de datasets/IAM, Looker em cima das marts, edition autoscaling.
+Fora do MVP: Terraform completo de buckets/IAM, Looker em cima das marts, BigQuery Editions.
 
 ---
 
@@ -248,4 +261,4 @@ Fora do MVP local (e deste documento): Terraform completo de datasets/IAM, Looke
 
 ---
 
-Este documento cobre a estratégia de custo/performance, justifica partitioning e clustering com impacto estimado em bytes (logo em slots e $) e serve de onboarding — complemento direto do código no repositório acima.
+Este documento cobre a estratégia de custo/performance, justifica partitioning e clustering com impacto estimado em bytes (logo em slots e $) e serve de onboarding, complemento direto do código no repositório acima.
