@@ -1,0 +1,25 @@
+version: 2
+
+snapshots:
+  - name: snap_empresas_capital_social
+    description: Histórico SCD2 de capital social — estratégia timestamp em dbt_updated_at.
+    columns:
+      - name: cnpj_basico
+        description: Chave de negócio da empresa.
+        tests: [not_null]
+        policy_tags: ['{{ var("policy_tag_cnpj_cpf") }}']
+      - name: razao_social
+        description: Razão social no momento do snapshot.
+        policy_tags: ['{{ var("policy_tag_nome") }}']
+      - name: capital_social
+        description: Valor rastreado ao longo do tempo.
+      - name: porte_empresa
+        description: Porte no momento do snapshot.
+      - name: dbt_updated_at
+        description: Coluna updated_at do SCD2.
+      - name: dbt_valid_from
+        description: Início da vigência do registro.
+      - name: dbt_valid_to
+        description: Fim da vigência; nulo na versão corrente.
+      - name: dbt_scd_id
+        description: ID interno do snapshot (dbt).

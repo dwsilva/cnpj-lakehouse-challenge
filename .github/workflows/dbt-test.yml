@@ -1,0 +1,31 @@
+name: dbt test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+env:
+  RF_VINTAGE: "2026-07-12"
+
+jobs:
+  dbt-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache ZIPs RF (partição 0)
+        uses: actions/cache@v4
+        with:
+          path: data/raw/${{ env.RF_VINTAGE }}
+          key: rf-cnpj-${{ env.RF_VINTAGE }}-partition-0-${{ hashFiles('scripts/rf_download.py') }}
+          restore-keys: |
+            rf-cnpj-${{ env.RF_VINTAGE }}-partition-0-
+
+      - name: Build image
+        run: docker compose build pipeline
+
+      - name: Ingestão amostra + dbt run/snapshot/test
+        run: |
+          docker compose run --rm --no-deps pipeline \
+            shell -c "bash scripts/ci_build.sh"

@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: dim_cnae
+    description: Dimensão de CNAE, uma linha por código.
+    meta:
+      owner: analytics
+      tier: gold
+      criticality: medium
+    columns:
+      - name: codigo_cnae
+        description: Código com 7 dígitos.
+        tests: [not_null, unique]
+      - name: descricao_cnae
+        description: Texto da atividade.
+      - name: secao_cnae
+        description: Seção (1º dígito).
+      - name: divisao_cnae
+        description: Divisão (2 dígitos).
+      - name: grupo_cnae
+        description: Grupo (3 dígitos).
+      - name: classe_cnae
+        description: Classe (5 dígitos).
+      - name: dbt_updated_at
+        description: Última carga da dimensão.

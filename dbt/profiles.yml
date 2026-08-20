@@ -1,0 +1,8 @@
+cnpj_lakehouse:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', 'duckdb/cnpj.duckdb') }}"
+      schema: main
+      threads: 4

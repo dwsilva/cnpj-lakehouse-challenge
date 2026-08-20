@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: dim_empresa
+    description: Dimensão de matriz, grain cnpj.
+    meta:
+      owner: analytics
+      tier: gold
+      criticality: high
+    columns:
+      - name: cnpj
+        description: Identificador único de 14 dígitos.
+        tests: [not_null, unique]
+        policy_tags: ['{{ var("policy_tag_cnpj_cpf") }}']
+      - name: cnpj_basico
+        description: Raiz do CNPJ.
+        policy_tags: ['{{ var("policy_tag_cnpj_cpf") }}']
+      - name: razao_social
+        description: Nome empresarial.
+        policy_tags: ['{{ var("policy_tag_nome") }}']
+        tests:
+          - dbt_utils.not_null_proportion:
+              at_least: 0.99
+      - name: nome_fantasia
+        description: Nome fantasia da matriz.
+        policy_tags: ['{{ var("policy_tag_nome") }}']
+      - name: porte_empresa
+        description: Código de porte RF.
+      - name: capital_social
+        description: Capital em reais.
+      - name: situacao_cadastral
+        description: Situação atual (ex. ATIVA).
+        tests:
+          - dbt_utils.not_null_proportion:
+              at_least: 0.99
+      - name: data_inicio_atividade
+        description: Data de abertura.
+        tests:
+          - dbt_utils.not_null_proportion:
+              at_least: 0.95
+      - name: cnae_fiscal_principal
+        description: Relaciona com dim_cnae.codigo_cnae.
+        tests:
+          - dbt_utils.not_null_proportion:
+              at_least: 0.90
+      - name: uf
+        description: UF da sede.
+        tests:
+          - dbt_utils.not_null_proportion:
+              at_least: 0.95
+      - name: municipio
+        description: Código IBGE.
+      - name: dbt_updated_at
+        description: Última carga da dimensão.

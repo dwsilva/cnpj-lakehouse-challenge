@@ -1,0 +1,67 @@
+version: 2
+
+macros:
+  - name: clean_text
+    description: >
+      Trim + cast pra varchar. CSV da RF costuma vir com espaço sobrando
+      e tipos inconsistentes no DuckDB, uso isso em todo staging.
+    arguments:
+      - name: column_name
+        description: Coluna ou expressão a limpar.
+
+  - name: format_cnpj
+    description: >
+      Junta cnpj_basico, ordem e dv com zeros à esquerda.
+      Resultado sempre 14 caracteres, como no layout Estabelecimentos.
+    arguments:
+      - name: cnpj_basico
+        description: Raiz (8 dígitos).
+      - name: cnpj_ordem
+        description: Meio do CNPJ (4 dígitos).
+      - name: cnpj_dv
+        description: Dígito verificador (2 dígitos).
+
+  - name: parse_capital_social
+    description: >
+      Capital social vem como string com vírgula decimal (ex. 100000,00).
+      Remove pontos de milhar, troca vírgula por ponto e converte pra double.
+      Null ou lixo vira 0.
+    arguments:
+      - name: column_name
+        description: Coluna capital_social do raw/staging.
+
+  - name: standardize_situacao_cadastral
+    description: >
+      Mapeia o código numérico da RF (01, 02, 03...) pra rótulo fixo:
+      NULA, ATIVA, SUSPENSA, INAPTA, BAIXADA. Qualquer outro valor = DESCONHECIDA.
+    arguments:
+      - name: column_name
+        description: Coluna situacao_cadastral (código, não o texto).
+
+  - name: audit_row_hash
+    description: >
+      MD5 de uma lista de colunas, separadas por pipe.
+      Na int_empresas_enriquecidas alimenta o row_hash, dá pra comparar
+      execuções sem diff linha a linha.
+    arguments:
+      - name: columns
+        description: Lista de expressões SQL (strings entre colchetes no Jinja).
+
+  - name: parse_rf_date
+    description: >
+      Datas da RF vêm como YYYYMMDD (ex. 20250710). try_cast direto vira null no DuckDB;
+      aqui uso strptime. No BigQuery cai em parse_date.
+    arguments:
+      - name: column_name
+        description: Coluna de data no layout RF.
+
+  - name: generate_schema_name
+    description: >
+      Override padrão do dbt. Com +schema: staging no dbt_project.yml,
+      sem isso o DuckDB criaria dev_staging em vez de staging.
+      Se não passar schema custom, cai no target.schema.
+    arguments:
+      - name: custom_schema_name
+        description: Valor de +schema do model (pode ser nulo).
+      - name: node
+        description: Nó dbt, o macro recebe mas não usa aqui.

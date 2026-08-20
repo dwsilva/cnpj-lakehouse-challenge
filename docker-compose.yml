@@ -1,0 +1,70 @@
+x-app: &app
+  build: .
+  environment: &app-env
+    DUCKDB_PATH: /app/duckdb/cnpj.duckdb
+    DBT_PROFILES_DIR: /app/dbt
+    PREFECT_API_URL: ${PREFECT_API_URL:-}
+    PREFECT_LOGGING_LEVEL: ${PREFECT_LOGGING_LEVEL:-INFO}
+    RF_VINTAGE: ${RF_VINTAGE:-2026-07-12}
+    RF_BASE_URL: ${RF_BASE_URL:-https://dados-abertos-rf-cnpj.casadosdados.com.br}
+    SAMPLE_N_ROWS: ${SAMPLE_N_ROWS:-10000}
+    ENABLE_RECEITAWS: ${ENABLE_RECEITAWS:-true}
+    RECEITAWS_BASE_URL: ${RECEITAWS_BASE_URL:-https://receitaws.com.br/v1/cnpj}
+    RECEITAWS_SAMPLE_SIZE: ${RECEITAWS_SAMPLE_SIZE:-5}
+    RECEITAWS_REQUEST_DELAY_SECONDS: ${RECEITAWS_REQUEST_DELAY_SECONDS:-3}
+    PREFECT_COLETA_CRON: ${PREFECT_COLETA_CRON:-0 6 5 * *}
+    PREFECT_COLETA_TIMEZONE: ${PREFECT_COLETA_TIMEZONE:-America/Sao_Paulo}
+  volumes:
+    - ./data:/app/data
+    - ./duckdb:/app/duckdb
+    - ./dbt:/app/dbt
+    - ./orchestration:/app/orchestration
+    - ./scripts:/app/scripts
+  working_dir: /app
+
+services:
+  pipeline:
+    <<: *app
+    container_name: cnpj-lakehouse-pipeline
+
+  prefect-server:
+    <<: *app
+    container_name: cnpj-lakehouse-prefect
+    profiles: [prefect]
+    command: [prefect-server]
+    ports: ["4200:4200"]
+    volumes:
+      - prefect-data:/root/.prefect
+
+  pipeline-prefect:
+    <<: *app
+    container_name: cnpj-lakehouse-pipeline-prefect
+    profiles: [prefect]
+    command: [pipeline]
+    depends_on: [prefect-server]
+    environment:
+      <<: *app-env
+      PREFECT_API_URL: http://prefect-server:4200/api
+      ENABLE_RECEITAWS: ${ENABLE_RECEITAWS:-true}
+
+  prefect-worker:
+    <<: *app
+    container_name: cnpj-lakehouse-prefect-worker
+    profiles: [prefect]
+    command: [prefect-serve]
+    depends_on: [prefect-server]
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      PREFECT_API_URL: http://prefect-server:4200/api
+      ENABLE_RECEITAWS: ${ENABLE_RECEITAWS:-true}
+
+  dbt-docs:
+    <<: *app
+    container_name: cnpj-lakehouse-dbt-docs
+    profiles: [docs]
+    command: [dbt-docs]
+    ports: ["8080:8080"]
+
+volumes:
+  prefect-data:
