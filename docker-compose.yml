@@ -1,5 +1,6 @@
 x-app: &app
   build: .
+  entrypoint: ["bash", "/app/scripts/entrypoint.sh"]
   environment: &app-env
     DUCKDB_PATH: /app/duckdb/cnpj.duckdb
     DBT_PROFILES_DIR: /app/dbt

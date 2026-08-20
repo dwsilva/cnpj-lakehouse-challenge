@@ -23,5 +23,7 @@ RUN mkdir -p /app/data/raw /app/duckdb /app/dbt/target /app/dbt/logs /app/dbt/db
     && chmod +x /app/scripts/entrypoint.sh /app/scripts/ci_build.sh /app/scripts/validate_entrega.sh \
     && chmod -R a+rwX /app/data /app/duckdb /app/dbt/target /app/dbt/logs /app/dbt/dbt_packages
 
-ENTRYPOINT ["/app/scripts/entrypoint.sh"]
+# bash (não ./entrypoint.sh): o volume ./scripts no Compose cobre o chmod da
+# imagem, e checkout no Windows costuma vir sem bit +x — quebra o CI no Linux.
+ENTRYPOINT ["bash", "/app/scripts/entrypoint.sh"]
 CMD ["pipeline"]

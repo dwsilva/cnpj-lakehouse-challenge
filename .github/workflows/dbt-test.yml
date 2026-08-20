@@ -25,6 +25,9 @@ jobs:
       - name: Build image
         run: docker compose build pipeline
 
+      - name: Permissão dos scripts (checkout Windows sem +x)
+        run: chmod +x scripts/*.sh
+
       - name: Ingestão amostra + dbt run/snapshot/test
         run: |
           docker compose run --rm --no-deps pipeline \
