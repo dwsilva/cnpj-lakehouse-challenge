@@ -1,0 +1,193 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Bronze — CSV da Receita Federal e JSON ReceitaWS, carregados pelo Prefect.
+    schema: raw
+    loader: prefect
+    tables:
+      - name: raw_empresas
+        description: Layout Empresas (1 linha por cnpj_basico).
+        columns:
+          - name: cnpj_basico
+            description: Raiz do CNPJ, 8 dígitos.
+          - name: razao_social
+            description: Nome empresarial como veio no CSV.
+          - name: natureza_juridica
+            description: Código RF da natureza jurídica.
+          - name: qualificacao_responsavel
+            description: Qualificação do responsável na RF.
+          - name: capital_social
+            description: Capital com vírgula decimal — ainda string aqui.
+          - name: porte_empresa
+            description: Código de porte.
+          - name: ente_federativo_responsavel
+            description: Ente federativo, quando aplicável.
+          - name: _partition_id
+            description: Partição RF (0–9) ou shared para Simples/CNAE.
+          - name: _vintage
+            description: Vintage RF (ex. 2026-07-12).
+          - name: _loaded_at
+            description: Timestamp da carga no DuckDB.
+          - name: _source_file
+            description: Caminho do CSV/ZIP de origem.
+
+      - name: raw_estabelecimentos
+        description: Layout Estabelecimentos (matriz e filiais).
+        columns:
+          - name: cnpj_basico
+            description: Raiz do CNPJ.
+          - name: cnpj_ordem
+            description: Quatro dígitos do meio.
+          - name: cnpj_dv
+            description: Dígito verificador.
+          - name: identificador_matriz_filial
+            description: 1 = matriz, 2 = filial.
+          - name: nome_fantasia
+            description: Nome fantasia do ponto.
+          - name: situacao_cadastral
+            description: Código numérico da situação (01–08).
+          - name: data_situacao_cadastral
+            description: Data da situação cadastral.
+          - name: motivo_situacao_cadastral
+            description: Motivo RF da situação.
+          - name: nome_cidade_exterior
+            description: Cidade no exterior, se houver.
+          - name: pais
+            description: País do endereço.
+          - name: data_inicio_atividade
+            description: Início das atividades.
+          - name: cnae_fiscal_principal
+            description: CNAE principal.
+          - name: cnae_fiscal_secundaria
+            description: CNAEs secundários no formato RF.
+          - name: tipo_logradouro
+            description: Rua, av, etc.
+          - name: logradouro
+            description: Nome do logradouro.
+          - name: numero
+            description: Número do imóvel.
+          - name: complemento
+            description: Complemento do endereço.
+          - name: bairro
+            description: Bairro.
+          - name: cep
+            description: CEP sem máscara.
+          - name: uf
+            description: UF.
+          - name: municipio
+            description: Código IBGE do município.
+          - name: ddd_1
+            description: DDD do telefone principal.
+          - name: telefone_1
+            description: Telefone principal.
+          - name: ddd_2
+            description: DDD do telefone secundário.
+          - name: telefone_2
+            description: Telefone secundário.
+          - name: ddd_fax
+            description: DDD do fax.
+          - name: fax
+            description: Número de fax.
+          - name: correio_eletronico
+            description: E-mail cadastrado.
+          - name: situacao_especial
+            description: Situação especial, se existir.
+          - name: data_situacao_especial
+            description: Data da situação especial.
+          - name: _partition_id
+            description: Partição RF (0–9) ou shared para Simples/CNAE.
+          - name: _vintage
+            description: Vintage RF (ex. 2026-07-12).
+          - name: _loaded_at
+            description: Timestamp da carga no DuckDB.
+          - name: _source_file
+            description: Caminho do CSV/ZIP de origem.
+
+      - name: raw_socios
+        description: Quadro societário por cnpj_basico.
+        columns:
+          - name: cnpj_basico
+            description: Empresa do sócio.
+          - name: identificador_socio
+            description: Tipo de sócio na RF.
+          - name: nome_socio
+            description: Nome ou razão social.
+          - name: cnpj_cpf_socio
+            description: Documento (mascarado na base RF).
+          - name: qualificacao_socio
+            description: Qualificação no contrato social.
+          - name: data_entrada_sociedade
+            description: Data de entrada.
+          - name: pais
+            description: País do sócio.
+          - name: representante_legal
+            description: Indicador de representante legal.
+          - name: nome_representante
+            description: Nome do representante.
+          - name: qualificacao_representante_legal
+            description: Qualificação do representante.
+          - name: faixa_etaria
+            description: Faixa etária (PF).
+          - name: _partition_id
+            description: Partição RF (0–9) ou shared para Simples/CNAE.
+          - name: _vintage
+            description: Vintage RF (ex. 2026-07-12).
+          - name: _loaded_at
+            description: Timestamp da carga no DuckDB.
+          - name: _source_file
+            description: Caminho do CSV/ZIP de origem.
+
+      - name: raw_simples
+        description: Opção Simples Nacional e MEI.
+        columns:
+          - name: cnpj_basico
+            description: Empresa consultada.
+          - name: opcao_pelo_simples
+            description: S ou N.
+          - name: data_opcao_simples
+            description: Data de opção pelo Simples.
+          - name: data_exclusao_simples
+            description: Data de saída do Simples.
+          - name: opcao_pelo_mei
+            description: S ou N — MEI.
+          - name: data_opcao_mei
+            description: Data de opção pelo MEI.
+          - name: data_exclusao_mei
+            description: Data de saída do MEI.
+          - name: _partition_id
+            description: Partição RF (0–9) ou shared para Simples/CNAE.
+          - name: _vintage
+            description: Vintage RF (ex. 2026-07-12).
+          - name: _loaded_at
+            description: Timestamp da carga no DuckDB.
+          - name: _source_file
+            description: Caminho do CSV/ZIP de origem.
+
+      - name: raw_cnae
+        description: Tabela de domínio CNAE.
+        columns:
+          - name: codigo
+            description: Código da atividade (sem padding).
+          - name: descricao
+            description: Descrição oficial.
+          - name: _partition_id
+            description: Partição RF (0–9) ou shared para Simples/CNAE.
+          - name: _vintage
+            description: Vintage RF (ex. 2026-07-12).
+          - name: _loaded_at
+            description: Timestamp da carga no DuckDB.
+          - name: _source_file
+            description: Caminho do CSV/ZIP de origem.
+
+      - name: receitaws_enrichment
+        description: JSON bruto da API ReceitaWS.
+        columns:
+          - name: cnpj
+            description: CNPJ consultado.
+          - name: payload
+            description: Resposta completa em JSON.
+          - name: fetched_at
+            description: Horário da consulta.
+          - name: source
+            description: receitaws_api — consulta HTTP.

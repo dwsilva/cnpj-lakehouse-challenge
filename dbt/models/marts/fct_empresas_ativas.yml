@@ -1,0 +1,68 @@
+version: 2
+
+models:
+  - name: fct_empresas_ativas
+    description: >
+      Empresas com situação ATIVA. Incremental por dbt_updated_at;
+      no BigQuery particiona em data_referencia e clusteriza UF, CNAE e situação.
+    meta:
+      owner: analytics
+      tier: gold
+      criticality: high
+    columns:
+      - name: cnpj
+        description: Chave do fato; bate com dim_empresa.cnpj.
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('dim_empresa')
+              field: cnpj
+        policy_tags: ['{{ var("policy_tag_cnpj_cpf") }}']
+      - name: cnpj_basico
+        description: Raiz do CNPJ.
+        policy_tags: ['{{ var("policy_tag_cnpj_cpf") }}']
+      - name: razao_social
+        description: Denominação legal.
+        policy_tags: ['{{ var("policy_tag_nome") }}']
+      - name: nome_fantasia
+        description: Nome fantasia.
+        policy_tags: ['{{ var("policy_tag_nome") }}']
+      - name: capital_social
+        description: Capital registrado.
+      - name: porte_empresa
+        description: Porte RF.
+      - name: situacao_cadastral
+        description: Sempre ATIVA neste fato.
+      - name: data_inicio_atividade
+        description: Data de abertura.
+      - name: cnae_fiscal_principal
+        description: Relaciona com dim_cnae.codigo_cnae.
+        tests:
+          - relationships:
+              to: ref('dim_cnae')
+              field: codigo_cnae
+              config:
+                where: "cnae_fiscal_principal is not null"
+                severity: warn
+      - name: uf
+        description: UF da matriz.
+      - name: municipio
+        description: Município IBGE.
+      - name: qty_socios
+        description: Número de sócios agregados.
+      - name: is_simples
+        description: Optante Simples.
+      - name: is_mei
+        description: Optante MEI.
+      - name: row_hash
+        description: Hash de auditoria herdado da int.
+      - name: data_referencia
+        description: Data da execução (partição no BQ).
+      - name: dbt_updated_at
+        description: Controle do incremental.
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "qty_socios >= 0"
+          config:
+            severity: warn

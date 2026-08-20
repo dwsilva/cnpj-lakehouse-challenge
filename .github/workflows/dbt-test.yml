@@ -1,0 +1,21 @@
+name: dbt test
+
+# Não baixa a RF. O job só prova que os modelos e os 39 testes ainda fecham
+# em cima das fixtures de data/ci/. Ingestão de verdade é o pipeline local.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  dbt-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build da imagem
+        run: docker compose build pipeline
+
+      - name: dbt run + snapshot + test
+        run: docker compose run --rm --no-deps pipeline shell -c "bash scripts/ci_build.sh"

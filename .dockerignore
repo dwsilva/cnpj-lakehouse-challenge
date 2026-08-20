@@ -1,0 +1,29 @@
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+
+# Segredos e overrides locais — não bake na imagem
+.env
+
+# Dados locais (montados via volume)
+data/raw/*
+data/sample/*
+data/demo
+duckdb/*.duckdb
+duckdb/*.wal
+
+# dbt artefatos
+dbt/target
+dbt/dbt_packages
+dbt/logs
+
+# IDE
+.idea
+.vscode
+*.md
+!README.md

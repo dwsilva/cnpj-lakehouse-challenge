@@ -1,0 +1,193 @@
+version: 2
+
+models:
+  - name: stg_empresas
+    description: Tabela Empresas da RF — limpeza de texto e capital numérico.
+    columns:
+      - name: cnpj_basico
+        description: Oito primeiros dígitos do CNPJ.
+        tests: [not_null, unique]
+      - name: razao_social
+        description: Nome empresarial registrado na RF.
+      - name: natureza_juridica
+        description: Código RF da natureza jurídica.
+      - name: qualificacao_responsavel
+        description: Código RF do responsável legal.
+      - name: capital_social
+        description: Capital convertido para número (vírgula decimal da RF).
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      - name: porte_empresa
+        description: Código de porte (ME, EPP, etc.).
+      - name: ente_federativo_responsavel
+        description: Ente federativo, quando houver.
+      - name: dbt_updated_at
+        description: Timestamp da última execução do model.
+
+  - name: stg_estabelecimentos
+    description: Estabelecimentos — monta CNPJ completo e padroniza situação.
+    columns:
+      - name: cnpj_basico
+        description: Raiz do CNPJ.
+      - name: cnpj_ordem
+        description: Quatro dígitos do meio do CNPJ.
+      - name: cnpj_dv
+        description: Dígito verificador.
+      - name: cnpj
+        description: CNPJ com 14 dígitos (basico + ordem + dv).
+        tests: [not_null, unique]
+        policy_tags: ['{{ var("policy_tag_cnpj_cpf") }}']
+      - name: identificador_matriz_filial
+        description: "1 matriz, 2 filial (código RF)."
+      - name: nome_fantasia
+        description: Nome fantasia do ponto.
+        policy_tags: ['{{ var("policy_tag_nome") }}']
+      - name: situacao_cadastral_codigo
+        description: Código original da situação (01 a 08).
+      - name: situacao_cadastral
+        description: Situação traduzida (ATIVA, BAIXADA, etc.).
+        tests:
+          - accepted_values:
+              values: ['NULA', 'ATIVA', 'SUSPENSA', 'INAPTA', 'BAIXADA', 'DESCONHECIDA']
+      - name: data_situacao_cadastral
+        description: Data em que a situação passou a valer.
+      - name: motivo_situacao_cadastral
+        description: Motivo RF associado à situação.
+      - name: data_inicio_atividade
+        description: Início das atividades no endereço.
+        tests:
+          - dbt_utils.not_null_proportion:
+              at_least: 0.95
+      - name: cnae_fiscal_principal
+        description: CNAE principal do estabelecimento.
+      - name: cnae_fiscal_secundaria
+        description: CNAEs secundários concatenados (layout RF).
+      - name: uf
+        description: UF do endereço.
+        tests:
+          - dbt_utils.not_null_proportion:
+              at_least: 0.95
+      - name: municipio
+        description: Código IBGE do município.
+      - name: cep
+        description: CEP sem formatação.
+        policy_tags: ['{{ var("policy_tag_endereco") }}']
+      - name: dbt_updated_at
+        description: Quando o model rodou pela última vez.
+
+  - name: stg_socios
+    description: Quadro societário por empresa (cnpj_basico).
+    columns:
+      - name: cnpj_basico
+        description: Empresa à qual o sócio pertence.
+        tests: [not_null]
+        policy_tags: ['{{ var("policy_tag_cnpj_cpf") }}']
+      - name: identificador_socio
+        description: Tipo de sócio na RF (PF, PJ, estrangeiro...).
+        tests: [not_null]
+      - name: nome_socio
+        description: Nome ou razão social do sócio.
+        policy_tags: ['{{ var("policy_tag_nome") }}']
+      - name: cnpj_cpf_socio
+        description: Documento do sócio (mascarado na base RF).
+        policy_tags: ['{{ var("policy_tag_cnpj_cpf") }}']
+      - name: qualificacao_socio
+        description: Qualificação do sócio no contrato social.
+      - name: data_entrada_sociedade
+        description: Data de entrada na sociedade.
+      - name: pais
+        description: País do sócio, quando informado.
+      - name: faixa_etaria
+        description: Faixa etária (sócio pessoa física).
+      - name: dbt_updated_at
+        description: Timestamp da última execução.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - cnpj_basico
+            - identificador_socio
+            - nome_socio
+            - data_entrada_sociedade
+
+  - name: stg_simples
+    description: Opção pelo Simples Nacional e MEI.
+    columns:
+      - name: cnpj_basico
+        description: Empresa consultada.
+        tests: [not_null, unique]
+      - name: opcao_pelo_simples
+        description: S ou N — optante pelo Simples.
+        tests:
+          - accepted_values:
+              values: ['S', 'N']
+              config:
+                where: "opcao_pelo_simples is not null"
+      - name: data_opcao_simples
+        description: Data de opção pelo Simples.
+      - name: data_exclusao_simples
+        description: Data de saída do Simples.
+      - name: opcao_pelo_mei
+        description: S ou N — optante pelo MEI.
+        tests:
+          - accepted_values:
+              values: ['S', 'N']
+              config:
+                where: "opcao_pelo_mei is not null"
+      - name: data_opcao_mei
+        description: Data de opção pelo MEI.
+      - name: data_exclusao_mei
+        description: Data de saída do MEI.
+      - name: dbt_updated_at
+        description: Controle de carga do staging.
+
+  - name: stg_cnae
+    description: Domínio CNAE com níveis derivados do código.
+    columns:
+      - name: codigo_cnae
+        description: Código com 7 dígitos (zeros à esquerda).
+        tests: [not_null, unique]
+      - name: descricao_cnae
+        description: Descrição oficial da atividade.
+      - name: secao_cnae
+        description: Primeiro dígito do código.
+      - name: divisao_cnae
+        description: Dois primeiros dígitos.
+      - name: grupo_cnae
+        description: Três primeiros dígitos.
+      - name: classe_cnae
+        description: Cinco primeiros dígitos.
+      - name: dbt_updated_at
+        description: Timestamp da última execução.
+
+  - name: stg_receitaws
+    description: Campos extraídos do JSON gravado pela task ReceitaWS.
+    columns:
+      - name: cnpj
+        description: CNPJ consultado na API.
+        tests: [not_null, unique]
+      - name: razao_social_api
+        description: Nome retornado pela ReceitaWS.
+      - name: nome_fantasia_api
+        description: Fantasia retornado pela ReceitaWS.
+      - name: situacao_api
+        description: Situação cadastral na API.
+      - name: porte_api
+        description: Porte informado na API.
+      - name: capital_social_api
+        description: Capital numérico vindo do JSON.
+      - name: cnae_api
+        description: CNAE principal no payload.
+      - name: cnae_descricao_api
+        description: Descrição do CNAE na API.
+      - name: municipio_api
+        description: Município no payload ReceitaWS.
+      - name: uf_api
+        description: UF no payload ReceitaWS.
+      - name: receitaws_source
+        description: Sempre receitaws_api (consulta HTTP).
+      - name: fetched_at
+        description: Quando a consulta foi feita.
+      - name: dbt_updated_at
+        description: Quando o model rodou pela última vez.

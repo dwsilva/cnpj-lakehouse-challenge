@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: int_empresas_enriquecidas
+    description: Uma linha por matriz — junta empresa, estabelecimento, sócios, Simples e ReceitaWS.
+    columns:
+      - name: cnpj
+        description: CNPJ completo da matriz.
+        tests: [not_null, unique]
+      - name: cnpj_basico
+        description: Raiz do CNPJ.
+        tests: [not_null]
+      - name: razao_social
+        description: Razão social vinda de stg_empresas.
+      - name: capital_social
+        description: Capital da tabela Empresas.
+      - name: porte_empresa
+        description: Porte cadastrado na RF.
+      - name: nome_fantasia
+        description: Fantasia do estabelecimento matriz.
+      - name: situacao_cadastral
+        description: Situação padronizada do estabelecimento.
+      - name: situacao_cadastral_codigo
+        description: Código RF bruto da situação.
+      - name: data_inicio_atividade
+        description: Início de atividade da matriz.
+      - name: cnae_fiscal_principal
+        description: CNAE principal da matriz.
+      - name: uf
+        description: UF da matriz.
+      - name: municipio
+        description: Município IBGE da matriz.
+      - name: qty_socios
+        description: Quantidade de linhas em stg_socios para o cnpj_basico.
+      - name: is_simples
+        description: Verdadeiro se optante pelo Simples.
+      - name: is_mei
+        description: Verdadeiro se optante pelo MEI.
+      - name: situacao_api
+        description: Situação retornada pela ReceitaWS (pode ser nula).
+      - name: capital_social_api
+        description: Capital informado na ReceitaWS.
+      - name: porte_api
+        description: Porte retornado pela ReceitaWS.
+      - name: cnae_api
+        description: CNAE principal na ReceitaWS.
+      - name: uf_api
+        description: UF na ReceitaWS.
+      - name: municipio_api
+        description: Município na ReceitaWS.
+      - name: receitaws_source
+        description: Sempre receitaws_api após refactor.
+      - name: has_receitaws_enrichment
+        description: Indica se houve match com stg_receitaws.
+      - name: receitaws_situacao_match
+        description: Situação RF bate com a da API.
+      - name: receitaws_capital_match
+        description: Capital RF bate com o da API (tolerância 0,01).
+      - name: row_hash
+        description: Hash de capital, situação e qty_socios — usado pra detectar mudança.
+      - name: dbt_updated_at
+        description: Maior timestamp entre estabelecimento e empresa.

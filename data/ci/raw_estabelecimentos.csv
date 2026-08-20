@@ -1,0 +1,4 @@
+cnpj_basico,cnpj_ordem,cnpj_dv,identificador_matriz_filial,nome_fantasia,situacao_cadastral,data_situacao_cadastral,motivo_situacao_cadastral,data_inicio_atividade,cnae_fiscal_principal,cnae_fiscal_secundaria,uf,municipio,cep
+11111111,0001,91,1,ACME SOFT,02,20200115,00,20150310,6201500,6202300,SP,3550308,01310100
+22222222,0001,81,1,MERCADO CENTRAL,02,20180601,00,20180601,4711301,,MG,3106200,30130100
+33333333,0001,71,1,PADARIA ANTIGA,08,20231120,01,20010520,6201500,,SP,3550308,04001000

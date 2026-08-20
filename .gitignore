@@ -1,0 +1,35 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Dados brutos baixados localmente
+data/raw/*
+!data/raw/.gitkeep
+data/sample/
+data/demo/
+
+# DuckDB
+duckdb/*.duckdb
+duckdb/*.wal
+!duckdb/.gitkeep
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/.user.yml
+
+# Prefect
+.prefect/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
