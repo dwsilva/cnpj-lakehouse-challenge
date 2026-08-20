@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 from loguru import logger
 
-from scripts.config import BRONZE_METADATA, DUCKDB_PATH, TABLE_COLUMNS
+from scripts.config import BRONZE_METADATA, DUCKDB_PATH, PROJECT_ROOT, TABLE_COLUMNS
 from scripts.duckdb_conn import connect_duckdb
 
 
@@ -138,3 +138,16 @@ def load_partition_to_duckdb(
 
     conn.close()
     return counts
+
+
+def load_ci_fixtures(db_path: Path | None = None) -> dict[str, int]:
+    """CSVs minúsculos em data/ci/ — o CI não precisa baixar ZIP da RF."""
+    fixtures_dir = PROJECT_ROOT / "data" / "ci"
+    frames: dict[str, pd.DataFrame] = {}
+    for table_name in TABLE_COLUMNS:
+        path = fixtures_dir / f"{table_name}.csv"
+        if not path.exists():
+            raise FileNotFoundError(f"Falta a fixture {path}")
+        frames[table_name] = pd.read_csv(path, dtype=str)
+        logger.info("Fixture {}: {} linhas", path.name, len(frames[table_name]))
+    return load_partition_to_duckdb(frames, partition_id="ci", vintage="ci", db_path=db_path)

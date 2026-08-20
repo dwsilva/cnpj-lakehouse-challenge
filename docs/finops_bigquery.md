@@ -173,7 +173,7 @@ Premissas: on-demand, US, ~10M estabelecimentos ativos no fato corrente, carga R
 |------|------------------|-------------------------|
 | Load RF → raw | Load job (barato) + storage raw | Partition expiration; Parquet no GCS |
 | `dbt run` marts | Query job nas views staging/int + merge da fato | Incremental; views não duplicam storage |
-| `dbt test` | Scan das colunas testadas | Testes em marts/staging já estreitos; CI usa amostra 10k |
+| `dbt test` | Scan das colunas testadas | Testes em marts/staging; CI usa fixtures, não o dump da RF |
 | BI (Looker etc.) | O grosso do $ se alguém omitir filtro de data | `require_partition_filter` + cluster UF |
 | Streaming / API | Não usado | ReceitaWS continua batch pequeno |
 
@@ -182,7 +182,7 @@ Premissas: on-demand, US, ~10M estabelecimentos ativos no fato corrente, carga R
 | Carga | Scan/mês (ordem) | $ (≈ US$ 6,25 / TiB) |
 |-------|------------------|----------------------|
 | dbt run incremental (fato) | 50–200 GB | < US$ 2 |
-| dbt test no CI (amostra local / partition) | desprezível | ~0 |
+| dbt test no CI (fixtures) | desprezível | ~0 |
 | BI: 20 pessoas × 50 queries/dia × 400 MB (só partition) | ~12 TiB | ~US$ 75 |
 | Mesmo BI + cluster UF/CNAE | ~1–3 TiB | ~US$ 10–20 |
 | Mesmo BI **sem** partition (full scan 5 GB × 365) | centenas de TiB | estoura o budget |
@@ -230,7 +230,7 @@ Não é necessário GCP, `.env` nem Python no host. Depois do run: `duckdb/cnpj.
 | Lineage | `docker compose --profile docs up dbt-docs` → :8080 |
 | UI Prefect | `docker compose --profile prefect up prefect-server prefect-worker -d` → :4200 |
 
-CI: `.github/workflows/dbt-test.yml` baixa a partição 0 (cache de ZIPs) e roda a amostra + `dbt test`.
+CI: `.github/workflows/dbt-test.yml` carrega fixtures em `data/ci/` e roda `dbt test` — sem download da RF.
 
 Fora do MVP local (e deste documento): Terraform completo de datasets/IAM, Looker em cima das marts, edition autoscaling.
 

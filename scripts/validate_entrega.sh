@@ -14,10 +14,7 @@ else
 fi
 
 echo ""
-echo "==> CI build (amostra partição 0)"
-export DUCKDB_PATH="${DUCKDB_PATH:-/tmp/cnpj_validate.duckdb}"
-export SAMPLE_N_ROWS="${SAMPLE_N_ROWS:-500}"
-export ENABLE_RECEITAWS="${ENABLE_RECEITAWS:-false}"
+echo "==> mesmo smoke do GitHub Actions (fixtures + dbt)"
 bash scripts/ci_build.sh
 
 echo ""

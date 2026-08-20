@@ -7,7 +7,7 @@ Use antes de enviar o repositório. O avaliador só precisa do [README](../READM
 - Sem `.env` com tokens reais
 - Sem `duckdb/*.duckdb` commitado
 - Sem `data/raw/**/*.zip` commitado
-- Sem `data/demo` (pipeline não usa fixture local — baixa a RF)
+- Sem `data/demo` (pipeline baixa a RF; o CI usa só `data/ci/`)
 
 ## 2. Execução que o avaliador vai rodar
 
@@ -25,6 +25,8 @@ Permissões: o entrypoint dá `chmod a+rwX` em `data/` e `duckdb/` ao sair — o
 ```bash
 docker compose run --rm --no-deps pipeline shell -c "bash scripts/ci_build.sh"
 ```
+
+Mesmo smoke do GitHub Actions: fixtures em `data/ci/`, sem download da RF.
 
 ## 4. Prefect UI (opcional)
 

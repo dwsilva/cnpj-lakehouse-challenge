@@ -19,7 +19,7 @@ Referência: [`teste_desafio_tecnico_engenheiro_de_dados_franq.md`](teste_desafi
 | Execução local | OK | Docker Compose, **sem `.env` obrigatório** | ver README |
 | ReceitaWS | OK | `receitaws_client.py`, `stg_receitaws` | API live, delay configurável, 5 CNPJs no default |
 | Resiliência | OK | retries Prefect; `duckdb_conn.py` (lock → `/tmp`) | chmod no exit (permissões no host) |
-| CI | OK | `.github/workflows/dbt-test.yml` | partição 0 + amostra + dbt test |
+| CI | OK | `.github/workflows/dbt-test.yml` | fixtures `data/ci/` + dbt test (sem ZIP da RF) |
 
 ## Testes (39)
 

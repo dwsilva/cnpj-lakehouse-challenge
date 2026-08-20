@@ -147,7 +147,7 @@ Outros comandos:
 docker compose run --rm pipeline ingestao-particao   # só bronze
 docker compose run --rm pipeline transform           # só dbt run/snapshot/test
 docker compose run --rm pipeline dbt-test            # só testes (banco já existe)
-docker compose run --rm --no-deps pipeline shell -c "bash scripts/ci_build.sh"
+docker compose run --rm --no-deps pipeline shell -c "bash scripts/ci_build.sh"  # smoke do GHA (fixtures, sem ZIP)
 ```
 
 `ingestao-completa` baixa **todas** as partições — volume grande, não é necessário para avaliar o desafio.
@@ -169,7 +169,9 @@ scripts/
   receitaws_client.py         # API → raw.receitaws_enrichment
   duckdb_conn.py              # fallback se o .duckdb estiver lockado
   entrypoint.sh               # permissões + comandos do container
+  ci_build.sh                 # GHA: fixtures + dbt (sem ZIP)
 
+data/ci/                      # CSVs minúsculos só para o CI
 dbt/models/                   # staging → intermediate → marts
 dbt/snapshots/                # SCD2 capital social
 dbt/macros/                   # 6 macros de negócio + generate_schema_name

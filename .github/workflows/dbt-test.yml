@@ -1,12 +1,12 @@
 name: dbt test
 
+# Não baixa a RF. O job só prova que os modelos e os 39 testes ainda fecham
+# em cima das fixtures de data/ci/. Ingestão de verdade é o pipeline local.
+
 on:
   push:
     branches: [main, master]
   pull_request:
-
-env:
-  RF_VINTAGE: "2026-07-12"
 
 jobs:
   dbt-test:
@@ -14,25 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache ZIPs RF (partição 0)
-        uses: actions/cache@v4
-        with:
-          path: data/raw/${{ env.RF_VINTAGE }}
-          key: rf-cnpj-${{ env.RF_VINTAGE }}-partition-0-${{ hashFiles('scripts/rf_download.py') }}
-          restore-keys: |
-            rf-cnpj-${{ env.RF_VINTAGE }}-partition-0-
-
-      - name: Build image
+      - name: Build da imagem
         run: docker compose build pipeline
 
-      - name: Permissão dos scripts (checkout Windows sem +x)
-        run: chmod +x scripts/*.sh
-
-      - name: Ingestão amostra + dbt run/snapshot/test
-        run: |
-          docker compose run --rm --no-deps \
-            -e DUCKDB_PATH=/tmp/cnpj_ci.duckdb \
-            -e ENABLE_RECEITAWS=false \
-            -e DBT_THREADS=1 \
-            -e SAMPLE_N_ROWS=1000 \
-            pipeline shell -c "bash scripts/ci_build.sh"
+      - name: dbt run + snapshot + test
+        run: docker compose run --rm --no-deps pipeline shell -c "bash scripts/ci_build.sh"

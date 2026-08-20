@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# CI local e GitHub Actions — baixa partição 0, ingere amostra e roda dbt.
-# Isola DuckDB em /tmp: o compose injeta DUCKDB_PATH no bind mount e
-# dbt test com 4 threads aborta (SIGABRT) nesse caminho.
+# Smoke do dbt no GitHub Actions (vale rodar local também).
+#
+# Não baixa ZIP da Receita. Isso é o pipeline do avaliador, com internet e paciência.
+# Aqui a gente só joga os CSVs de data/ci/ no DuckDB e manda um dbt run/snapshot/test.
+# Se alguém quebrar um modelo ou um teste, o PR fica vermelho — e pronto.
+
 set -euo pipefail
 
+# Bind mount do compose + dbt em paralelo já abortou o runner uma vez.
+# /tmp é chato, mas é estável.
 export DUCKDB_PATH=/tmp/cnpj_ci.duckdb
-export ENABLE_RECEITAWS=false
-export SAMPLE_N_ROWS="${CI_SAMPLE_N_ROWS:-1000}"
-export RF_VINTAGE="${RF_VINTAGE:-2026-07-12}"
-export DBT_THREADS=1
+rm -f "$DUCKDB_PATH"
 
-mkdir -p "data/raw/${RF_VINTAGE}" /tmp
-rm -f "${DUCKDB_PATH}"
+echo "==> fixtures (data/ci) -> DuckDB"
+python -c "from scripts.load_duckdb import load_ci_fixtures; load_ci_fixtures()"
 
-python scripts/rf_ingest.py \
-  --partition 0 \
-  --vintage "${RF_VINTAGE}" \
-  --sample-n-rows "${SAMPLE_N_ROWS}"
-
+echo "==> dbt deps + run + snapshot + test"
 cd dbt
 dbt deps
 dbt run --threads 1
 dbt snapshot --threads 1
 dbt test --threads 1
+
+echo "OK — dbt passou nas fixtures."
