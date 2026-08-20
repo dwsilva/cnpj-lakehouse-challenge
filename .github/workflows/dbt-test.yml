@@ -30,5 +30,9 @@ jobs:
 
       - name: Ingestão amostra + dbt run/snapshot/test
         run: |
-          docker compose run --rm --no-deps pipeline \
-            shell -c "bash scripts/ci_build.sh"
+          docker compose run --rm --no-deps \
+            -e DUCKDB_PATH=/tmp/cnpj_ci.duckdb \
+            -e ENABLE_RECEITAWS=false \
+            -e DBT_THREADS=1 \
+            -e SAMPLE_N_ROWS=1000 \
+            pipeline shell -c "bash scripts/ci_build.sh"
